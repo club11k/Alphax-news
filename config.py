@@ -11,6 +11,14 @@ FINNHUB_API_KEY = os.environ["FINNHUB_API_KEY"]
 # Si no se define, el bot cae automáticamente al filtro por palabras clave.
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
+# CryptoPanic (API dedicada a noticias cripto). Gratis, requiere registro en cryptopanic.com/developers/api
+# Si no se define, esa fuente se omite automáticamente.
+CRYPTOPANIC_API_KEY = os.environ.get("CRYPTOPANIC_API_KEY")
+
+# RSS oficiales, no necesitan API key
+COINDESK_RSS_URL = "https://www.coindesk.com/arc/outboundfeeds/rss/"
+COINTELEGRAPH_RSS_URL = "https://cointelegraph.com/rss"
+
 # --- Top 10-20 criptomonedas a cubrir ---
 TOP_COINS = [
     "Bitcoin", "BTC",

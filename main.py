@@ -7,8 +7,10 @@ from config import (
     TIMEZONE, DAILY_SUMMARY_HOUR, DAILY_SUMMARY_MINUTE, CHECK_INTERVAL_MINUTES,
 )
 from sources.finnhub_source import fetch_finnhub_crypto_news
-from sources.investing_source import fetch_investing_crypto_news
 from sources.bitget_source import fetch_bitget_announcements
+from sources.cryptopanic_source import fetch_cryptopanic_news
+from sources.coindesk_source import fetch_coindesk_news
+from sources.cointelegraph_source import fetch_cointelegraph_news
 from filters import filter_and_enrich
 from telegram_sender import send_news_batch, send_daily_summary_header
 
@@ -23,7 +25,13 @@ seen_ids = set()
 
 def collect_all_news():
     items = []
-    for fetch_fn in (fetch_finnhub_crypto_news, fetch_investing_crypto_news, fetch_bitget_announcements):
+    for fetch_fn in (
+        fetch_finnhub_crypto_news,
+        fetch_bitget_announcements,
+        fetch_cryptopanic_news,
+        fetch_coindesk_news,
+        fetch_cointelegraph_news,
+    ):
         try:
             items.extend(fetch_fn())
         except Exception:
