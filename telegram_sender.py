@@ -1,0 +1,54 @@
+import time
+import requests
+from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, SEND_SPACING_SECONDS
+
+API_BASE = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+
+
+def send_news_item(item):
+    """Envía una noticia: con foto si hay imagen disponible, si no como texto simple."""
+    caption = item["summary"] or item["headline"]
+
+    if item.get("image"):
+        url = f"{API_BASE}/sendPhoto"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "photo": item["image"],
+            "caption": caption,
+            "parse_mode": "HTML",
+        }
+    else:
+        url = f"{API_BASE}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": caption,
+            "parse_mode": "HTML",
+        }
+
+    resp = requests.post(url, data=payload, timeout=15)
+    if not resp.ok:
+        # Si falla el envío con foto (ej. imagen rota), reintenta como texto plano
+        if item.get("image"):
+            fallback = requests.post(f"{API_BASE}/sendMessage", data={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": caption,
+                "parse_mode": "HTML",
+            }, timeout=15)
+            return fallback.ok
+        return False
+    return True
+
+
+def send_news_batch(items):
+    """Envía una lista de noticias espaciadas para no saturar el canal."""
+    for item in items:
+        send_news_item(item)
+        time.sleep(SEND_SPACING_SECONDS)
+
+
+def send_daily_summary_header():
+    requests.post(f"{API_BASE}/sendMessage", data={
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": "Buenos días, estas son las noticias cripto de hoy de ALTO IMPACTO",
+        "parse_mode": "HTML",
+    }, timeout=15)
