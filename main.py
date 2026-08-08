@@ -8,9 +8,9 @@ from config import (
 )
 from sources.finnhub_source import fetch_finnhub_crypto_news
 from sources.bitget_source import fetch_bitget_announcements
-from sources.cryptopanic_source import fetch_cryptopanic_news
 from sources.coindesk_source import fetch_coindesk_news
 from sources.cointelegraph_source import fetch_cointelegraph_news
+from image_utils import ensure_images
 from filters import filter_and_enrich
 from telegram_sender import send_news_batch, send_daily_summary_header
 
@@ -28,7 +28,6 @@ def collect_all_news():
     for fetch_fn in (
         fetch_finnhub_crypto_news,
         fetch_bitget_announcements,
-        fetch_cryptopanic_news,
         fetch_coindesk_news,
         fetch_cointelegraph_news,
     ):
@@ -45,6 +44,7 @@ def run_cycle():
     new_items = [i for i in raw_items if i["id"] not in seen_ids]
 
     relevant_items = filter_and_enrich(new_items)
+    relevant_items = ensure_images(relevant_items)
     for i in new_items:
         seen_ids.add(i["id"])
 

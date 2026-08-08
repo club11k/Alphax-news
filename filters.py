@@ -28,6 +28,12 @@ def ai_relevance_and_summary(item):
         "Marca 'relevant' como true solo si afecta de forma clara al top 10-20 de "
         "criptomonedas por capitalización o son novedades importantes del exchange Bitget "
         "(nuevos listados, hackeos, cambios regulatorios grandes). Ignora ruido menor.\n\n"
+        "Para el 'summary', hazlo dinámico y fácil de leer en Telegram:\n"
+        "- Añade 1-3 emojis relevantes al contenido (ej. 🚀 subida, 📉 bajada, ⚠️ alerta, "
+        "🏦 bancos/regulación, 🔐 seguridad/hackeo).\n"
+        "- Resalta en negrita los datos clave (cifras, nombres de criptos, porcentajes) "
+        "usando etiquetas HTML <b>así</b> (Telegram lo soporta, no uses markdown con asteriscos).\n"
+        "- No abuses: negrita solo en lo realmente importante, no en frases enteras.\n\n"
         f"Titular: {item.get('headline', '')}\n"
         f"Contenido: {item.get('summary', '')}"
     )
