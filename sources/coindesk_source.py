@@ -8,17 +8,13 @@ def fetch_coindesk_news():
 
     normalized = []
     for entry in feed.entries:
-        image = None
-        if "media_content" in entry and entry.media_content:
-            image = entry.media_content[0].get("url")
-
         normalized.append({
             "source": "coindesk",
             "id": entry.get("id", entry.get("link", "")),
             "headline": entry.get("title", ""),
             "summary": entry.get("summary", ""),
             "url": entry.get("link", ""),
-            "image": image,
+            "image": None,  # se busca la imagen real del artículo después
             "datetime": entry.get("published", ""),
         })
     return normalized

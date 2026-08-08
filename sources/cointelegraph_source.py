@@ -8,17 +8,13 @@ def fetch_cointelegraph_news():
 
     normalized = []
     for entry in feed.entries:
-        image = None
-        if "media_content" in entry and entry.media_content:
-            image = entry.media_content[0].get("url")
-
         normalized.append({
             "source": "cointelegraph",
             "id": entry.get("id", entry.get("link", "")),
             "headline": entry.get("title", ""),
             "summary": entry.get("summary", ""),
             "url": entry.get("link", ""),
-            "image": image,
+            "image": None,  # el RSS trae un logo genérico de plantilla; se busca la imagen real después
             "datetime": entry.get("published", ""),
         })
     return normalized
