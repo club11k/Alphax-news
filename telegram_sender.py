@@ -6,10 +6,15 @@ API_BASE = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 
 def send_news_item(item):
-    """Envía una noticia: con foto si hay imagen disponible, si no como texto simple."""
+    """Envía una noticia: con foto real si hay, con imagen generada si no, o como texto si falla todo."""
     caption = item["summary"] or item["headline"]
 
-    if item.get("image"):
+    if item.get("image_bytes"):
+        url = f"{API_BASE}/sendPhoto"
+        files = {"photo": ("news.png", item["image_bytes"], "image/png")}
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption, "parse_mode": "HTML"}
+        resp = requests.post(url, data=payload, files=files, timeout=20)
+    elif item.get("image"):
         url = f"{API_BASE}/sendPhoto"
         payload = {
             "chat_id": TELEGRAM_CHAT_ID,
@@ -17,6 +22,7 @@ def send_news_item(item):
             "caption": caption,
             "parse_mode": "HTML",
         }
+        resp = requests.post(url, data=payload, timeout=15)
     else:
         url = f"{API_BASE}/sendMessage"
         payload = {
@@ -24,11 +30,11 @@ def send_news_item(item):
             "text": caption,
             "parse_mode": "HTML",
         }
+        resp = requests.post(url, data=payload, timeout=15)
 
-    resp = requests.post(url, data=payload, timeout=15)
     if not resp.ok:
-        # Si falla el envío con foto (ej. imagen rota), reintenta como texto plano
-        if item.get("image"):
+        # Si falla el envío con foto (real o generada), reintenta como texto plano
+        if item.get("image") or item.get("image_bytes"):
             fallback = requests.post(f"{API_BASE}/sendMessage", data={
                 "chat_id": TELEGRAM_CHAT_ID,
                 "text": caption,

@@ -11,6 +11,7 @@ from sources.bitget_source import fetch_bitget_announcements
 from sources.coindesk_source import fetch_coindesk_news
 from sources.cointelegraph_source import fetch_cointelegraph_news
 from image_utils import ensure_images
+from image_generator import generate_news_image
 from filters import filter_and_enrich
 from telegram_sender import send_news_batch, send_daily_summary_header
 
@@ -45,6 +46,9 @@ def run_cycle():
 
     relevant_items = filter_and_enrich(new_items)
     relevant_items = ensure_images(relevant_items)
+    for i in relevant_items:
+        if not i.get("image"):
+            i["image_bytes"] = generate_news_image(i["headline"], tag=i.get("source", "cripto"))
     for i in new_items:
         seen_ids.add(i["id"])
 
