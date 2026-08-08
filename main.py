@@ -39,6 +39,19 @@ def collect_all_news():
     return items
 
 
+def prime_seen_ids():
+    """
+    Al arrancar (o tras un redeploy), marca todas las noticias que ya existen en las
+    fuentes como 'vistas' sin enviarlas. Así solo se envía lo que sea realmente nuevo
+    a partir de ahora, y un redeploy no provoca un reenvío masivo de noticias antiguas.
+    """
+    logger.info("Arranque: cargando noticias existentes sin enviarlas...")
+    raw_items = collect_all_news()
+    for i in raw_items:
+        seen_ids.add(i["id"])
+    logger.info(f"{len(seen_ids)} noticias marcadas como ya vistas")
+
+
 def run_cycle():
     logger.info("Revisando fuentes de noticias cripto...")
     raw_items = collect_all_news()
@@ -64,6 +77,8 @@ def run_daily_summary():
     send_daily_summary_header()
     run_cycle()
 
+
+prime_seen_ids()
 
 scheduler = BackgroundScheduler(timezone=TIMEZONE)
 scheduler.add_job(run_cycle, "interval", minutes=CHECK_INTERVAL_MINUTES)
