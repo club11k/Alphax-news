@@ -15,6 +15,7 @@ from sources.cointelegraph_source import fetch_cointelegraph_news
 from image_utils import ensure_images
 from image_generator import generate_news_image
 from filters import filter_and_enrich
+from dedup import filter_duplicate_topics
 from telegram_sender import send_news_batch, send_daily_summary_header
 
 logging.basicConfig(level=logging.INFO)
@@ -23,12 +24,17 @@ logger = logging.getLogger("crypto-news-bot")
 app = Flask(__name__)
 
 SEEN_IDS_FILE = "/tmp/seen_ids.json"
+RECENT_SENT_FILE = "/tmp/recent_sent.json"
 MAX_STORED_IDS = 1000
 
 # IDs ya enviados, para no duplicar noticias entre ciclos.
 # Se guardan también en disco (/tmp) para sobrevivir a un reinicio del proceso
 # sin redeploy (aunque un redeploy sí borra /tmp; para eso está prime_seen_ids).
 seen_ids = set()
+
+# Titulares enviados en las últimas 24h (con timestamp), para detectar el mismo
+# tema contado por fuentes distintas y no repetirlo. Ver dedup.py.
+recent_sent = []
 
 
 def load_seen_ids_from_disk():
@@ -49,6 +55,24 @@ def save_seen_ids_to_disk():
             json.dump(trimmed, f)
     except OSError:
         logger.exception("No se pudo guardar seen_ids.json")
+
+
+def load_recent_sent_from_disk():
+    if os.path.exists(RECENT_SENT_FILE):
+        try:
+            with open(RECENT_SENT_FILE, "r") as f:
+                recent_sent.extend(json.load(f))
+            logger.info(f"{len(recent_sent)} titulares recientes cargados desde disco")
+        except (json.JSONDecodeError, OSError):
+            logger.exception("No se pudo leer recent_sent.json, se ignora")
+
+
+def save_recent_sent_to_disk():
+    try:
+        with open(RECENT_SENT_FILE, "w") as f:
+            json.dump(recent_sent, f)
+    except OSError:
+        logger.exception("No se pudo guardar recent_sent.json")
 
 
 def collect_all_news():
@@ -73,6 +97,7 @@ def prime_seen_ids():
     a partir de ahora, y un redeploy no provoca un reenvío masivo de noticias antiguas.
     """
     load_seen_ids_from_disk()
+    load_recent_sent_from_disk()
     logger.info("Arranque: cargando noticias existentes sin enviarlas...")
     raw_items = collect_all_news()
     for i in raw_items:
@@ -87,6 +112,8 @@ def run_cycle():
     new_items = [i for i in raw_items if i["id"] not in seen_ids]
 
     relevant_items = filter_and_enrich(new_items)
+    relevant_items = filter_duplicate_topics(relevant_items, recent_sent)
+    save_recent_sent_to_disk()
     relevant_items = ensure_images(relevant_items)
     for i in relevant_items:
         if not i.get("image"):
