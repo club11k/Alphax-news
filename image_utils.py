@@ -33,6 +33,8 @@ def find_article_image(url):
 def ensure_images(items):
     """Rellena la imagen de cada noticia que no la traiga, buscándola en su propia página."""
     for item in items:
+        if item.get("skip_image_lookup"):
+            continue
         if not item.get("image") and item.get("url"):
             item["image"] = find_article_image(item["url"])
     return items
