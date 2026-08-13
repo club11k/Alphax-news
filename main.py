@@ -16,7 +16,7 @@ from image_utils import ensure_images
 from image_generator import generate_news_image
 from filters import filter_and_enrich
 from dedup import filter_duplicate_topics
-from telegram_sender import send_news_batch, send_daily_summary_header
+from telegram_sender import send_news_batch, send_daily_summary_header, send_daily_digest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("crypto-news-bot")
@@ -25,6 +25,7 @@ app = Flask(__name__)
 
 SEEN_IDS_FILE = "/tmp/seen_ids.json"
 RECENT_SENT_FILE = "/tmp/recent_sent.json"
+DAILY_DIGEST_FILE = "/tmp/daily_digest.json"
 MAX_STORED_IDS = 1000
 
 # IDs ya enviados, para no duplicar noticias entre ciclos.
@@ -35,6 +36,9 @@ seen_ids = set()
 # Titulares enviados en las últimas 24h (con timestamp), para detectar el mismo
 # tema contado por fuentes distintas y no repetirlo. Ver dedup.py.
 recent_sent = []
+
+# Titulares enviados desde el último resumen diario, para el recopilatorio de las 9:00
+daily_digest_items = []
 
 
 def load_seen_ids_from_disk():
@@ -75,6 +79,23 @@ def save_recent_sent_to_disk():
         logger.exception("No se pudo guardar recent_sent.json")
 
 
+def load_daily_digest_from_disk():
+    if os.path.exists(DAILY_DIGEST_FILE):
+        try:
+            with open(DAILY_DIGEST_FILE, "r") as f:
+                daily_digest_items.extend(json.load(f))
+        except (json.JSONDecodeError, OSError):
+            logger.exception("No se pudo leer daily_digest.json, se ignora")
+
+
+def save_daily_digest_to_disk():
+    try:
+        with open(DAILY_DIGEST_FILE, "w") as f:
+            json.dump(daily_digest_items, f)
+    except OSError:
+        logger.exception("No se pudo guardar daily_digest.json")
+
+
 def collect_all_news():
     items = []
     for fetch_fn in (
@@ -98,6 +119,7 @@ def prime_seen_ids():
     """
     load_seen_ids_from_disk()
     load_recent_sent_from_disk()
+    load_daily_digest_from_disk()
     logger.info("Arranque: cargando noticias existentes sin enviarlas...")
     raw_items = collect_all_news()
     for i in raw_items:
@@ -125,6 +147,8 @@ def run_cycle():
     if relevant_items:
         logger.info(f"Enviando {len(relevant_items)} noticias relevantes")
         send_news_batch(relevant_items)
+        daily_digest_items.extend(i["headline"] for i in relevant_items)
+        save_daily_digest_to_disk()
     else:
         logger.info("Sin noticias relevantes en este ciclo")
 
@@ -132,7 +156,10 @@ def run_cycle():
 def run_daily_summary():
     logger.info("Enviando resumen diario 9:00")
     send_daily_summary_header()
-    run_cycle()
+    run_cycle()  # por si justo hay algo nuevo en este instante, también se manda individualmente
+    send_daily_digest(list(daily_digest_items))
+    daily_digest_items.clear()
+    save_daily_digest_to_disk()
 
 
 prime_seen_ids()

@@ -58,3 +58,38 @@ def send_daily_summary_header():
         "text": "Buenos días, estas son las noticias cripto de hoy de ALTO IMPACTO",
         "parse_mode": "HTML",
     }, timeout=15)
+
+
+def send_daily_digest(headlines):
+    """
+    Envía el recopilatorio de titulares enviados durante el día (cada uno ya se
+    mandó individualmente cuando salió, esto es solo el resumen de las 9:00).
+    """
+    if not headlines:
+        requests.post(f"{API_BASE}/sendMessage", data={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": "Hoy no hubo más noticias de alto impacto además de las ya enviadas.",
+            "parse_mode": "HTML",
+        }, timeout=15)
+        return
+
+    lines = [f"• {h}" for h in headlines]
+
+    # Trocear en varios mensajes si se pasa del límite de Telegram (~4096 caracteres)
+    chunks, current = [], ""
+    for line in lines:
+        candidate = f"{current}\n{line}" if current else line
+        if len(candidate) > 3500:
+            chunks.append(current)
+            current = line
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+
+    for chunk in chunks:
+        requests.post(f"{API_BASE}/sendMessage", data={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": chunk,
+            "parse_mode": "HTML",
+        }, timeout=15)
